@@ -34,7 +34,7 @@ renderMixinParam = (node) ->
 renderMixinArg = (node) ->
   param = renderValue(node.value)
   if node.name
-    param = "#{node.name.slice(1)}=#{param}"
+    param = "#{node.name.slice(1)}:#{param}"
   param
 
 renderPrelude = ->
@@ -244,8 +244,9 @@ expressionVisitor = defineVisitor baseVisitor,
     else
       throw new Error("unknow color #{node}")
 
-  visitNegative: (node) ->
-    @acc "- #{renderValue(node.value, @options)}"
+  visitNegative: (node, options) ->
+    options.visitDeeper = false
+    @acc "(- #{renderValue(node.value, @options)})"
 
 treeVisitor = defineVisitor baseVisitor,
   indent: ''
@@ -288,6 +289,8 @@ treeVisitor = defineVisitor baseVisitor,
 
   visitRulesetOut: (node) ->
     unless node.root
+      # Generate a newline after every ruleset to make the code more readable
+      console.log ""
       @decreaseIndent()
 
   visitRule: (node, options) ->
@@ -299,7 +302,8 @@ treeVisitor = defineVisitor baseVisitor,
       @p "#{name} #{renderValue(node.value)}#{node.important}"
 
   visitComment: (node) ->
-    @p node.value unless node.silent
+    # Always return comments to increase readability
+    @p node.value
 
   visitMedia: (node, options) ->
     options.visitDeeper = false
@@ -325,10 +329,7 @@ treeVisitor = defineVisitor baseVisitor,
     @p "#{name}(#{node.params.map(renderMixinParam).join(', ')})"
     for rule in node.rules
       renderTree(rule, @increaseIndent())
-    if node.params.length == 0 or node.params.every((p) -> p.value?)
-      @p ".#{name}"
-      @p "#{name}()", @increaseIndent()
-
+    console.log ""
 
   visitMixinCall: (node, options) ->
     options.visitDeeper = false
@@ -343,8 +344,13 @@ treeVisitor = defineVisitor baseVisitor,
       v = "#{renderValue(node.selector).slice(1)}"
       v += "(#{node.arguments.map(renderMixinArg).join(', ')})"
     else
-      v = "@extend .#{renderValue(node.selector).slice(1)}"
+      v = "#{renderValue(node.selector).slice(1)}()"
     @p v
+    @p ""
+
+  visitExtend: (node, options) -> 
+    options.visitDeeper = false
+    @p "@extend #{node.selector.elements[0].value}"
 
   visitImport: (node, options) ->
     options.visitDeeper = false

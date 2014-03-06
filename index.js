@@ -57,7 +57,7 @@ renderMixinArg = function(node) {
   var param;
   param = renderValue(node.value);
   if (node.name) {
-    param = "" + (node.name.slice(1)) + "=" + param;
+    param = "" + (node.name.slice(1)) + ":" + param;
   }
   return param;
 };
@@ -292,8 +292,9 @@ expressionVisitor = defineVisitor(baseVisitor, {
       throw new Error("unknow color " + node);
     }
   },
-  visitNegative: function(node) {
-    return this.acc("- " + (renderValue(node.value, this.options)));
+  visitNegative: function(node, options) {
+    options.visitDeeper = false;
+    return this.acc("(- " + (renderValue(node.value, this.options)) + ")");
   }
 });
 
@@ -364,6 +365,7 @@ treeVisitor = defineVisitor(baseVisitor, {
   },
   visitRulesetOut: function(node) {
     if (!node.root) {
+      console.log("");
       return this.decreaseIndent();
     }
   },
@@ -378,9 +380,7 @@ treeVisitor = defineVisitor(baseVisitor, {
     }
   },
   visitComment: function(node) {
-    if (!node.silent) {
-      return this.p(node.value);
-    }
+    return this.p(node.value);
   },
   visitMedia: function(node, options) {
     var features, mediaVar, rule, _i, _len, _ref2, _results;
@@ -418,12 +418,7 @@ treeVisitor = defineVisitor(baseVisitor, {
       rule = _ref2[_i];
       renderTree(rule, this.increaseIndent());
     }
-    if (node.params.length === 0 || node.params.every(function(p) {
-      return p.value != null;
-    })) {
-      this.p("." + name);
-      return this.p("" + name + "()", this.increaseIndent());
-    }
+    return console.log("");
   },
   visitMixinCall: function(node, options) {
     var name, namespace, v;
@@ -440,9 +435,14 @@ treeVisitor = defineVisitor(baseVisitor, {
       v = "" + (renderValue(node.selector).slice(1));
       v += "(" + (node["arguments"].map(renderMixinArg).join(', ')) + ")";
     } else {
-      v = "@extend ." + (renderValue(node.selector).slice(1));
+      v = "" + (renderValue(node.selector).slice(1)) + "()";
     }
-    return this.p(v);
+    this.p(v);
+    return this.p("");
+  },
+  visitExtend: function(node, options) {
+    options.visitDeeper = false;
+    return this.p("@extend " + node.selector.elements[0].value);
   },
   visitImport: function(node, options) {
     options.visitDeeper = false;
